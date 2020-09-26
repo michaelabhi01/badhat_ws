@@ -6,6 +6,7 @@ use App\Chat;
 use App\ChatRoom;
 use App\Http\Controllers\Controller;
 use App\User;
+use App\ArchivedRetailer;
 use Illuminate\Http\Request;
 
 class ChatController extends Controller
@@ -31,6 +32,9 @@ class ChatController extends Controller
             }
 
             $chat->vendor = User::select('id', 'name', 'business_name', 'image')->where('id', $id)->first();
+            if(empty($chat->vendor)){
+            $chat->vendor = ArchivedRetailer::select('id', 'org_name AS name', 'org_name AS business_name')->where('id', $id)->first();
+            }
             return $chat;
         });
 
