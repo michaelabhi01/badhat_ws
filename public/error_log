@@ -1,0 +1,2 @@
+[18-Aug-2020 09:40:08 Asia/Kolkata] PHP Fatal error:  Cannot use Illuminate\Support\Facades\Storage as Storage because the name is already in use in /home/fl9yaffx2ilz/public_html/app/Http/Controllers/api/UserController.php on line 15
+[18-Aug-2020 09:40:29 Asia/Kolkata] PHP Fatal error:  Cannot use Illuminate\Support\Facades\Validator as Validator because the name is already in use in /home/fl9yaffx2ilz/public_html/app/Http/Controllers/api/UserController.php on line 15
