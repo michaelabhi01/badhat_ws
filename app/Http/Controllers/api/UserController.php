@@ -8,6 +8,7 @@ use App\User;
 use App\Notification;
 use App\Order;
 use App\CartItem;
+use App\ChatRoom;
 use App\ArchivedRetailer;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -65,8 +66,13 @@ class UserController extends Controller
                 $path = Storage::put('public/avatars', $request->file('image'), 'public');
                 $user->image = $path;
             }
-            ArchivedRetailer::where('org_phone', $request->mobile)->update(['status' => '0']);
+            $updateResult = ArchivedRetailer::where('org_phone', $request->mobile)->update(['status' => '0']);
             User::where('mobile', $request->mobile)->update(['name' => $request->name, 'business_name' => $request->business_name, 'state' => $request->state, 'district' => $request->district, 'business_type' => $request->business_type, 'business_category' => $request->business_category, 'pincode' => $request->pincode, 'gstin' => $request->gstin,'email' => $request->email,'address' => $request->address,'city' => $request->city, 'latitude' => $request->latitude, 'longitude' => $request->longitude, 'image' => $user->image]);
+            if(!empty($updateResult)){
+                $ArchivedRetailerId = DB::table('archived_retailers')->where('org_phone', $request->mobile)->pluck('id')->toArray();
+                $userId = DB::table('users')->where('mobile', $request->mobile)->pluck('id')->toArray();
+                $error = $this->updateChat($userId[0], $ArchivedRetailerId[0]);
+            }
 //            if ($user->save()) {
                 return $this->success([], "User Created Successfully");
 //            } else {
@@ -338,5 +344,11 @@ class UserController extends Controller
         $data = array("notification"=>$notification,"cart"=>$cart,"order"=>$order);
         return $this->success($data,"App State Data");
         
+    }
+    
+    public function updateChat($userId, $ArchivedRetailerId){
+        
+        ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['name' => DB::raw("REPLACE(name,  $ArchivedRetailerId, $userId)")]);
+        ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['vendor_id' => $userId]);
     }
 }
