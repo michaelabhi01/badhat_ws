@@ -61,13 +61,9 @@ class ChatController extends Controller
                 $room->vendor_id = $request->vendor_id;
                 $room->user_id = $user_id;
                 $room->save();
-                $room->refresh();
                 $error = $this->sendMessage($room->user_id, $room->vendor_id);
-                if ($error == null) {
-                    return $this->success([], "Message sent on mobile too.");
-                } else {
-                    return $this->error($error);
-                }
+                $room->refresh();
+                
             }
 
         } else {
@@ -85,9 +81,9 @@ class ChatController extends Controller
         
         $vendor = User::find($room->vendor_id);
         $user = User::find($room->user_id);
-        if($user_id == $room->vendor_id)
+        if($user_id == $room->vendor_id && !empty($user))
             $this->sendPush('New Message', $chat->message, $user->fcm_token);
-        if($user_id == $room->user_id)
+        if($user_id == $room->user_id && !empty($vendor))
             $this->sendPush('New Message',$chat->message, $vendor->fcm_token);
 
         return $this->success($chat, "Success");
@@ -132,11 +128,14 @@ class ChatController extends Controller
         
         $data_user = User::select('name', 'business_name')->where('id', $user_id)->first();
         $data_vendor = User::select('name', 'mobile', 'business_name')->where('id', $vendor_id)->first();
+        if(empty($data_vendor)){
+            $data_vendor = ArchivedRetailer::select('org_name AS business_name', 'org_phone AS mobile')->where('id', $vendor_id)->first();
+        }
         $phone = $data_vendor->mobile;
         $business_name_receiver = $data_vendor->business_name;
         $business_name_sender = $data_user->business_name;
         $curl = curl_init();
-        $message= "Hi $business_name_receiver you have received message from $business_name_sender on Badhat App. Click to see --link--.";
+        $message= "Hi $business_name_receiver you have received message from $business_name_sender on Badhat App. Click to see https://play.google.com/store/apps/details?id=com.badhat.app";
         $message = str_replace(" ", '%20', $message);
         curl_setopt_array($curl, array(
             CURLOPT_URL => "https://www.fast2sms.com/dev/bulk?authorization=MWwq74b8PSYxTVjvUpslDu2iZn5yo1FNh9td6OLRgIrzKaA0ekEAFu8KqmS4aGvd5ZfCVPXw3bJBURnz&message=$message&route=p&numbers=$phone&sender_id=FSTSMS&language=english",

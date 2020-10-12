@@ -115,7 +115,7 @@ class UserController extends Controller
                             ->orWhere('business_name', 'LIKE', '%' . $request->search_key . '%');
                     })
                     ->where('status', 1)
-                    ->get()->except($this->getAuthenticatedUser()->id);
+                    ->get();
             
             $archived = ArchivedRetailer::select('id','org_name AS business_name','org_phone AS mobile','state', 'district','business_type', 'category AS business_category')
                         ->when($request->business_type, function ($query) use ($request) {
@@ -134,7 +134,7 @@ class UserController extends Controller
                             return $q->where('org_name', 'LIKE', '%' . $request->search_key . '%');
                             })
                         ->where('status', 1)
-//                        ->groupBy('business_category')
+                        ->groupBy('org_phone')
                         ->get();
 
                         $result = $users->union($archived);
@@ -193,12 +193,27 @@ class UserController extends Controller
                 ->first();
         
         if(empty($data)){
+            $mobile = DB::table('archived_retailers')->where('id', $id)->pluck('org_phone')->toArray();
+            
             $data = ArchivedRetailer::where('id', $id)
                     ->with('products')
                     ->select('id','org_name AS business_name', 'org_phone AS mobile', 'state','district','business_type','category AS business_category')
                     ->first();
-        }
+            
+            $data->verticals = DB::table('archived_retailers')
+                    ->join('verticals', 'archived_retailers.vertical_id', '=', 'verticals.id')
+                    ->where('archived_retailers.org_phone', $mobile[0])
+                    ->pluck('verticals.name')
+                    ->toArray();
 
+            $data->subcategories = DB::table('archived_retailers')
+                    ->join('subcategories', 'archived_retailers.subcategory_id', '=', 'subcategories.id')
+                    ->where('archived_retailers.org_phone', $mobile[0])
+                    ->groupBy('subcategories.name')
+                    ->pluck('subcategories.name')
+                    ->toArray();
+        }
+        
         $data->favorite = Favorite::where('user_id', $this->getAuthenticatedUser()->id)
             ->where('vendor_id', $id)->first() != null;
 
@@ -348,7 +363,41 @@ class UserController extends Controller
     
     public function updateChat($userId, $ArchivedRetailerId){
         
-        ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['name' => DB::raw("REPLACE(name,  $ArchivedRetailerId, $userId)")]);
-        ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['vendor_id' => $userId]);
+            ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['name' => DB::raw("REPLACE(name,  $ArchivedRetailerId, $userId)")]);
+            ChatRoom::where('vendor_id', $ArchivedRetailerId)->update(['vendor_id' => $userId]);
+    }
+    
+    public function ibutton(Request $request){
+        
+        $businessType = $request->business_type;
+        $userState = $request->state;
+        $category = $request->business_category;
+        
+        if($businessType = 'seller' || $businessType = 'distributor' || $businessType = 'stockist' || $businessType = 'manufacturer' || $businessType = 'agent' ||$businessType = 'wholesaler' ||$businessType = 'brand' || $businessType = 'supplier'){
+            
+                $dataUser = User::where('business_type', 'retailer')
+                    ->join('categories', 'users.business_category', '=', 'categories.id')
+                    ->where('state', $userState)
+                    ->get();
+                
+                $dataArchived = ArchivedRetailer::where('business_type', 'retailer')
+                    ->where('state', $userState)
+                    ->where('category', $category)
+                    ->groupBy('org_phone')
+                    ->get();
+
+                $data = $dataArchived->union($dataUser);
+
+                return $this->success($data, "Data");
+        }
+        
+        else if($businessType = 'retailer'){
+                $data = User::whereIn('business_type', ['seller','distributor','stockist','manufacturer','agent','wholesaler','brand','supplier'])
+                        ->join('categories', 'users.business_category', '=', 'categories.id')
+                        ->where('state', $userState)
+                        ->get();
+
+                return $this->success($data, "Data");
+        }
     }
 }

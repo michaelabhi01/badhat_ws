@@ -28,7 +28,11 @@ Route::group(['middleware' => ['auth:api']], function () {
 
     // subcategories
     Route::get('subCategories', 'api\CategoryController@allSubcategories');
-
+    Route::get('getsubCategories/{category_id}', 'api\CategoryController@subcategories');
+    
+    //verticals
+    Route::get('getVerticals/{subcategory_id}', 'api\CategoryController@verticals');
+    
     // product
     Route::post('addProduct', 'api\ProductController@addProduct');
     Route::post('editProduct', 'api\ProductController@editProduct');
@@ -72,5 +76,8 @@ Route::group(['middleware' => ['auth:api']], function () {
     Route::get('notifications', 'api\NotificationController@index');
 
     Route::get('logout', 'api\AuthController@logout');
+    
+    //iButton
+    Route::get('iButton', 'api\UserController@ibutton');
 
 });
